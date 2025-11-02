@@ -1,0 +1,32 @@
+{
+  "name": "vsc-plugin-tiaoc",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.22.0"
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "panel": [
+        {
+          "id": "isp-container",
+          "title": "ISP",
+          "icon": ""
+        }
+      ]
+    },
+    "views": {
+      "isp-container": [
+        {
+          "id": "isp",
+          "name": "name",
+          "icon": "icon",
+          "type": "webview"
+        }
+      ]
+    }
+  },
+  "main": "./src/ext.js"
+}
