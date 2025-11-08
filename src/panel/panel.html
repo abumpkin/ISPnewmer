@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en" style="height: 100%; overflow: hidden">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <link href="${resPath}/src/panel/panel.css" rel="stylesheet" />
+  </head>
+  <body style="height: 100%; margin: 0">
+    <script src="${resPath}/src/panel/panel.js" type="text/javascript"></script>
+    <div id="framework" style="height: 100%">
+      <div
+        class="h-layout"
+        style="height: 100%; display: flex; flex-direction: row"
+      >
+        <div
+          style="
+            background-color: aliceblue;
+            height: 100%;
+            width: 100px;
+            flex-basis: 150px;
+          "
+        ></div>
+        <div
+          style="
+            background-color: antiquewhite;
+            height: 100%;
+            width: 100px;
+            flex-grow: 1;
+          "
+        >
+          <div
+            class="v-layout"
+            style="height: 100%; display: flex; flex-direction: column"
+          >
+            <div
+              id="limit-area"
+              style="
+                height: 50px;
+                background-color: azure;
+                display: flex;
+                flex-direction: row;
+              "
+            >
+              <div
+                style="
+                  flex-grow: 1;
+                  background-color: aquamarine;
+                  display: flex;
+                "
+              ></div>
+              <div style="padding: 4px; display: flex">
+                <div
+                  style="
+                    margin-block: auto;
+                    display: flex;
+                    align-items: center;
+                    flex-direction: row;
+                  "
+                >
+                  <a
+                    id="fitting-btn"
+                    class="monaco-button monaco-text-button"
+                    role="button"
+                    ><span>拟合模式</span></a
+                  >
+                  <a
+                    id="fitting-apply-btn"
+                    class="monaco-button monaco-text-button button-disable"
+                    role="button"
+                    ><span>应用</span></a
+                  >
+                </div>
+              </div>
+            </div>
+            <div id="curve-area" style="flex-grow: 1; padding: 10px">
+              <div
+                id="curve-editor"
+                style="
+                  height: 100%;
+                  width: 100%;
+                  position: relative;
+                  box-sizing: border-box;
+                "
+              >
+                <canvas
+                  style="
+                    height: 100%;
+                    width: 100%;
+                    background-color: darkseagreen;
+                    position: absolute;
+                    border: 1px solid var(--vscode-editorWidget-background);
+                  "
+                ></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

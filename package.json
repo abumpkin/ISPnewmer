@@ -28,5 +28,6 @@
       ]
     }
   },
+  "enabledApiProposals": ["extensionRuntime"],
   "main": "./src/ext.js"
 }

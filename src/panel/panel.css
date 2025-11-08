@@ -1,0 +1,31 @@
+.monaco-text-button {
+  box-sizing: border-box;
+  display: flex;
+  width: 100%;
+  padding: 4px;
+  border-radius: 2px;
+  text-align: center;
+  cursor: pointer;
+  justify-content: center;
+  align-items: center;
+  border: 1px solid var(--vscode-button-border, transparent);
+  line-height: 18px;
+  color: var(--vscode-button-foreground);
+  background-color: var(--vscode-button-background);
+  user-select: none;
+  word-break: keep-all;
+}
+
+.monaco-text-button:hover {
+  text-decoration: none !important;
+  background-color: var(--vscode-button-hoverBackground);
+}
+
+.button-fitting-mode {
+  background-color: var(--vscode-editorWarning-foreground) !important;
+}
+
+.button-disable {
+  background-color: var(--vscode-editor-inactiveSelectionBackground) !important;
+  cursor: not-allowed;
+}
