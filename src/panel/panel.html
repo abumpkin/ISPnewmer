@@ -15,15 +15,22 @@
       >
         <div
           style="
-            background-color: aliceblue;
-            height: 100%;
+            /* background-color: aliceblue; */
             width: 100px;
             flex-basis: 150px;
+            padding: 5px;
+            display: flex;
           "
-        ></div>
+        >
+          <textarea
+            id="story"
+            name="story"
+            style="resize: none; font-family: auto; overflow-y: scroll"
+          >12, 34, 51, 11, -13, 14, 15, 5, 1,,</textarea>
+        </div>
         <div
           style="
-            background-color: antiquewhite;
+            /* background-color: antiquewhite; */
             height: 100%;
             width: 100px;
             flex-grow: 1;
@@ -36,20 +43,151 @@
             <div
               id="limit-area"
               style="
-                height: 50px;
-                background-color: azure;
+                /* height: 40px; */
+                /* background-color: azure; */
                 display: flex;
                 flex-direction: row;
               "
             >
               <div
+                id="param-area"
                 style="
                   flex-grow: 1;
-                  background-color: aquamarine;
+                  /* background-color: aquamarine; */
                   display: flex;
+                  flex-direction: row;
+                  align-items: center;
+                  user-select: none;
+                  overflow-y: hidden;
+                  overflow-x: auto;
                 "
-              ></div>
-              <div style="padding: 4px; display: flex">
+              >
+                <div style="padding-inline: 5px">
+                  <label for="interpolate-select" style="display: block"
+                    >插值算法:</label
+                  >
+                  <select id="interpolate-select">
+                    <option value="linear">Linear</option>
+                    <option value="cubicSpline">Cubic Spline</option>
+                    <option value="catmullRom">Catmull Rom</option>
+                    <option value="pchip" selected>PCHIP</option>
+                    <!-- <option value="polynomial">Polynomial</option> -->
+                  </select>
+                </div>
+                <div style="padding-inline: 5px">
+                  <label for="decimal-num-input" style="display: block"
+                    >小数位:</label
+                  >
+                  <input
+                    id="decimal-num-input"
+                    type="number"
+                    style="width: 3em"
+                    value="3"
+                  />
+                </div>
+                <div style="padding-inline: 5px">
+                  <label for="ratio-input" style="display: block">比例:</label>
+                  <input
+                    id="ratio-input"
+                    type="number"
+                    style="width: 3em"
+                    value="1"
+                    step="0.1"
+                  />
+                </div>
+                <div style="padding-inline: 5px">
+                  <div style="display: flex; align-items: center">
+                    <label for="min-input" style="display: inline"
+                      >最小值:</label
+                    >
+                    <input
+                      id="min-input"
+                      type="number"
+                      style="width: 4em"
+                      placeholder="无"
+                    />
+                    <input
+                      id="min-input-valid"
+                      type="checkbox"
+                      style="margin: 0"
+                    />
+                  </div>
+                  <div style="display: flex; align-items: center">
+                    <label for="max-input" style="display: inline"
+                      >最大值:</label
+                    >
+                    <input
+                      id="max-input"
+                      type="number"
+                      style="width: 4em"
+                      placeholder="无"
+                    />
+                    <input
+                      id="max-input-valid"
+                      type="checkbox"
+                      style="margin: 0"
+                    />
+                  </div>
+                </div>
+                <div style="padding-inline: 5px">
+                  <div style="display: flex; align-items: center">
+                    <input
+                      id="plus-input"
+                      type="number"
+                      style="width: 4em"
+                      value="1"
+                    />
+                    <input
+                      id="plus-btn"
+                      type="button"
+                      style="margin: 0"
+                      value="+"
+                    />
+                  </div>
+                  <div style="display: flex; align-items: center">
+                    <input
+                      id="multi-input"
+                      type="number"
+                      style="width: 4em"
+                      value="1"
+                      step="0.01"
+                    />
+                    <input
+                      id="multi-btn"
+                      type="button"
+                      style="margin: 0"
+                      value="×"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div style="padding-inline: 4px; display: flex">
+                <div
+                  style="
+                    padding-block: 3px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-evenly;
+                    flex-direction: column;
+                    margin-right: 4px;
+                  "
+                >
+                  <a
+                    id="adjust-display-btn"
+                    class="monaco-button monaco-text-button"
+                    role="button"
+                    style="font-size: 0.7em; padding: 0; line-height: 1.5em"
+                    ><span>调整显示</span></a
+                  >
+                  <a
+                    id="round-btn"
+                    class="monaco-button monaco-text-button"
+                    role="button"
+                    style="font-size: 0.7em; padding: 0; line-height: 1.5em"
+                    ><span>四舍五入</span></a
+                  >
+                </div>
+
                 <div
                   style="
                     margin-block: auto;
@@ -73,7 +211,7 @@
                 </div>
               </div>
             </div>
-            <div id="curve-area" style="flex-grow: 1; padding: 10px">
+            <div id="curve-area" style="flex-grow: 1; padding: 5px">
               <div
                 id="curve-editor"
                 style="
@@ -84,12 +222,14 @@
                 "
               >
                 <canvas
+                  tabindex="0"
                   style="
                     height: 100%;
                     width: 100%;
                     background-color: darkseagreen;
                     position: absolute;
-                    border: 1px solid var(--vscode-editorWidget-background);
+                    box-sizing: border-box;
+                    outline: 1px solid var(--vscode-editorWidget-background);
                   "
                 ></canvas>
               </div>

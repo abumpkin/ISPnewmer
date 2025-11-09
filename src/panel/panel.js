@@ -4,6 +4,117 @@ function getCSSVar(varName) {
     .getPropertyValue(varName)
     .trim();
 }
+function singleLinear(points, x) {
+  const p0 = points[0],
+    p1 = points[1];
+  if (x <= p0.x) return p0.y;
+  if (x >= p1.x) return p1.y;
+  const t = (x - p0.x) / (p1.x - p0.x);
+  return p0.y + t * (p1.y - p0.y);
+}
+
+/**
+ * 将数字字符串分割为数字数组，自动识别多种分割符
+ * @param {string} str - 输入字符串，如 "1 2.0，-1"
+ * @returns {number[]} 数字数组
+ */
+function parseNumberArray(str) {
+  if (!str || typeof str !== "string") {
+    return [];
+  }
+
+  // 移除首尾空白
+  str = str.trim();
+  if (str === "") return [];
+
+  // 使用正则匹配所有可能的数字（包括负数、小数）
+  // 正则说明：
+  // -?        : 可选负号
+  // \d*       : 0个或多个数字（处理 .5 这种情况）
+  // \.?       : 可选小数点
+  // \d+       : 1个或多个数字（确保至少有一个数字）
+  const numberRegex = /-?\d*\.?\d+/g;
+  const matches = str.match(numberRegex);
+
+  if (!matches) return [];
+
+  // 转换为数字并过滤无效值
+  return matches
+    .map((numStr) => parseFloat(numStr))
+    .filter((num) => !isNaN(num));
+}
+
+/**
+ * 提取数字字符串中的所有分割符（非数字部分）
+ * @param {string} str - 输入字符串
+ * @returns {string[]} 分割符数组
+ */
+function extractSeparators(str) {
+  if (!str || typeof str !== "string") {
+    return [];
+  }
+
+  str = str.trim();
+  if (str === "") return [];
+
+  // 移除所有数字、负号、小数点，剩下的就是分割符
+  // 保留分割符的原始顺序和重复
+  const numberRegex = /-?\d*\.?\d+/g;
+  const separators = [];
+  let lastIndex = 0;
+  let match;
+
+  // 遍历所有数字匹配，提取之间的分割符
+  while ((match = numberRegex.exec(str)) !== null) {
+    const separator = str.slice(lastIndex, match.index);
+    if (separator) {
+      separators.push(separator);
+    }
+    lastIndex = match.index + match[0].length;
+  }
+
+  // 添加末尾的分割符（如果有的话）
+  const trailing = str.slice(lastIndex);
+  if (trailing) {
+    separators.push(trailing);
+  }
+
+  // 如果没有找到任何数字，整个字符串都是分割符
+  if (separators.length === 0 && !str.match(numberRegex)) {
+    return [str];
+  }
+
+  return separators;
+}
+
+/**
+ * 将数字数组和分割符数组拼接成完整的字符串
+ * @param {number[]} numbers - 数字数组
+ * @param {string[]} separators - 分割符数组
+ * @param {string} [defaultSeparator=' '] - 当分割符不足时的默认分割符
+ * @returns {string} 拼接后的字符串
+ */
+function joinNumberArray(numbers, separators, defaultSeparator = " ") {
+  if (!Array.isArray(numbers) || numbers.length === 0) {
+    return "";
+  }
+
+  if (!Array.isArray(separators)) {
+    separators = [];
+  }
+
+  let result = String(numbers[0]);
+
+  for (let i = 1; i < numbers.length; i++) {
+    const separator =
+      separators[i - 1] !== undefined ? separators[i - 1] : defaultSeparator;
+    result += separator + String(numbers[i]);
+  }
+
+  // 如果有额外的前导或尾随分割符，需要处理
+  // 但通常我们只关心数字之间的分割符
+  return result;
+}
 
 // 插值
 const Interpolate = {
@@ -35,14 +146,6 @@ const Interpolate = {
     return y0 + t * (y1 - y0);
   },
   cubicSpline: function (points, x) {
-    function singleLinear(points, x) {
-      const p0 = points[0],
-        p1 = points[1];
-      if (x <= p0.x) return p0.y;
-      if (x >= p1.x) return p1.y;
-      const t = (x - p0.x) / (p1.x - p0.x);
-      return p0.y + t * (p1.y - p0.y);
-    }
     const n = points.length;
     if (n < 2) throw new Error("At least 2 points required");
     if (n === 2) return singleLinear(points, x); // 退化为线性
@@ -112,7 +215,7 @@ const Interpolate = {
   catmullRom: function (points, x) {
     const n = points.length;
     if (n < 2) throw new Error("At least 2 points required");
-    if (n === 2) return linearInterpolate(points, x);
+    if (n === 2) return singleLinear(points, x);
 
     const xs = points.map((p) => p.x);
     const ys = points.map((p) => p.y);
@@ -155,7 +258,7 @@ const Interpolate = {
   pchip: function (points, x) {
     const n = points.length;
     if (n < 2) throw new Error("At least 2 points required");
-    if (n === 2) return linearInterpolate(points, x);
+    if (n === 2) return singleLinear(points, x);
 
     const xs = points.map((p) => p.x);
     const ys = points.map((p) => p.y);
@@ -271,6 +374,7 @@ function CurveChart(element) {
   this.elementObj = element;
   this.onResize = (ev) => {};
   this.axis = null;
+  this.params = {};
 
   if (null == this.elementObj || undefined == this.elementObj) {
     this.elementObj = document.createElement("canvas");
@@ -323,13 +427,14 @@ function CurveChart(element) {
           height: ctx.canvas.height - 40, // 绘制高度
           xSpace: 20 * dpr, // 每个值间距
           ySpaceMin: 20 * dpr, // 每个值间距
-          ratio: 1.5, // 多少像素代表单位值
+          ratio: 5, // 多少像素代表单位值
           yBase: -125, // 纵坐标基线代表的值
           xBase: -5, // 横坐标基线代表的值
+          interpolate: Interpolate.cubicSpline,
           interTimes: 10, // 插值次数
           fittingMode: false, //拟合模式
           fittingPoints: [],
-          decimalNum: 2, // 小数位数
+          decimalNum: 0, // 小数位数
           minVal: -100, // 最小值
           maxVal: 100, // 最大值
           onVauleChanged: (idx, val) => {
@@ -438,18 +543,7 @@ function CurveChart(element) {
             //   this.status.oriVal + dy;
             let val = this.params.pParams.self.calcY2Val(y);
 
-            if (
-              this.params.pParams.minVal != null &&
-              val < this.params.pParams.minVal
-            ) {
-              val = this.params.pParams.minVal;
-            }
-            if (
-              this.params.pParams.maxVal != null &&
-              val > this.params.pParams.maxVal
-            ) {
-              val = this.params.pParams.maxVal;
-            }
+            val = this.params.pParams.self.valueLimit(val);
             this.params.pParams.valArr[this.params.index] = val;
 
             this.params.radius = this.status.oriParams.radius * 1.25;
@@ -665,8 +759,11 @@ function CurveChart(element) {
           this.params.xSpace
         );
       };
-      this.xIsInAxisDisplay = (x) => {
-        return x <= this.params.x + this.params.width && x >= this.params.x;
+      this.xIsInAxisDisplay = (x, tolerance) => {
+        return (
+          x <= this.params.x + this.params.width + tolerance &&
+          x >= this.params.x - tolerance
+        );
       };
       this.drawCurve = (pts, interpolate) => {
         if (pts.length >= 2) {
@@ -690,16 +787,25 @@ function CurveChart(element) {
             let val = this.calcY2Val(
               interpolate(this.params.fittingPoints, this.calcIdx2X(i))
             );
-            if (this.params.minVal != null && val < this.params.minVal) {
-              val = this.params.minVal;
-            }
-            if (this.params.maxVal != null && val > this.params.maxVal) {
-              val = this.params.maxVal;
-            }
-            this.params.valArr[i] = val;
+
+            this.params.valArr[i] = this.valueLimit(val);
           }
         }
       };
+
+      this.valueLimit = (val) => {
+        if (this.params.minVal != null && val < this.params.minVal) {
+          val = this.params.minVal;
+        }
+        if (this.params.maxVal != null && val > this.params.maxVal) {
+          val = this.params.maxVal;
+        }
+        val =
+          Math.round(val * Math.pow(10, this.params.decimalNum)) /
+          Math.pow(10, this.params.decimalNum);
+        return val;
+      };
+
       this.clearFittingCurve = () => {
         this.params.fittingPoints = [];
       };
@@ -843,8 +949,8 @@ function CurveChart(element) {
         // 最大最小值线
         ctx.save();
         ctx.lineWidth = 2;
-        ctx.strokeStyle = "red";
         if (this.params.minVal != null) {
+          ctx.strokeStyle = "blue";
           ctx.beginPath();
           ctx.moveTo(
             0 + this.params.x + this.status.yTagWidth,
@@ -857,6 +963,7 @@ function CurveChart(element) {
           ctx.stroke();
         }
         if (this.params.maxVal != null) {
+          ctx.strokeStyle = "red";
           ctx.beginPath();
           ctx.moveTo(
             0 + this.params.x + this.status.yTagWidth,
@@ -885,7 +992,7 @@ function CurveChart(element) {
           let pointY = this.calcVal2y(this.params.valArr[i.params.index]);
           i.params.x = pointX;
           i.params.y = pointY;
-          if (!this.xIsInAxisDisplay(pointX)) {
+          if (!this.xIsInAxisDisplay(pointX, this.params.xSpace)) {
             continue;
           }
 
@@ -918,7 +1025,7 @@ function CurveChart(element) {
           ctx.save();
           ctx.strokeStyle = getCSSVar("--vscode-editorWidget-background");
           ctx.lineWidth = 2 * dpr;
-          this.drawCurve(curvePoints, Interpolate.cubicSpline);
+          this.drawCurve(curvePoints, this.params.interpolate);
           ctx.restore();
         }
 
@@ -941,6 +1048,7 @@ function CurveChart(element) {
               pParams: this.params,
             });
           }
+          this.status.fittingCurve.params.interpolate = this.params.interpolate;
           this.status.fittingCurve.trigger(down, x, y);
         }
 
@@ -987,8 +1095,85 @@ function CurveChart(element) {
   };
   actElems.add(chartElems.IndicatorLine);
 
+  this.applyParams = (params) => {
+    Object.assign(this.params, params);
+    if (this.axis != null) {
+      Object.assign(this.axis.params, this.params);
+    }
+    this.fresh();
+  };
+
+  this.applyFitting = () => {
+    if (this.axis != null) {
+      this.axis.applyFitting();
+    }
+    this.fresh();
+  };
+
+  this.clearFittingCurve = () => {
+    if (this.axis != null) {
+      this.axis.clearFittingCurve();
+    }
+    this.fresh();
+  };
+
+  this.setRatio = (rt) => {
+    if (this.axis != null) {
+      const yMid = this.axis.calcY2Val(
+        this.axis.params.y + this.axis.params.height / 2
+      );
+      this.params.ratio = rt;
+      this.axis.params.ratio = rt;
+      this.moveToMiddle(yMid);
+    }
+  };
+
+  this.moveToMiddle = (val) => {
+    if (this.axis != null) {
+      const yBase =
+        val - this.axis.params.height / 2 / this.axis.params.ratio / dpr;
+      this.axis.params.yBase = yBase;
+    }
+    this.fresh();
+  };
+
+  this.getArrayMin = () => {
+    if (this.axis != null)
+      return this.axis.params.valArr.reduce((a, b) => Math.min(a, b));
+    return NaN;
+  };
+
+  this.getArrayMax = () => {
+    if (this.axis != null)
+      return this.axis.params.valArr.reduce((a, b) => Math.max(a, b));
+    return NaN;
+  };
+
+  this.getArrayMean = () => {
+    if (this.axis != null)
+      return (
+        this.axis.params.valArr.reduce((a, b) => a + b) /
+        this.axis.params.valArr.length
+      );
+    return NaN;
+  };
+
+  this.getSuitableRatio = (scale) => {
+    if (this.axis != null) {
+      const max = this.axis.params.valArr.reduce((a, b) => Math.max(a, b));
+      const min = this.axis.params.valArr.reduce((a, b) => Math.min(a, b));
+      if (max == min) return 1;
+      const rt = (this.axis.params.height / dpr / (max - min)) * scale;
+      return rt;
+    }
+    return 1;
+  };
+
   this.loadArray = function (arr) {
-    this.axis = new chartElems.Axis(arr, {});
+    if (this.axis != null) {
+      actElems.delete(this.axis);
+    }
+    this.axis = new chartElems.Axis(arr, this.params);
     actElems.add(this.axis);
   };
 
@@ -1050,49 +1235,208 @@ function CurveChart(element) {
     // 可在这里实现自定义右键菜单
     console.log("Custom right-click at", e.clientX, e.clientY);
   });
+
+  this.elementObj.addEventListener("click", () => {
+    this.elementObj.focus();
+  });
 }
 
 window.onload = () => {
-  let canvas = document.querySelector("#curve-editor canvas");
+  const paramArea = document.querySelector("#param-area");
+  const fittingBtn = document.querySelector("#fitting-btn");
+  const adjustBtn = document.querySelector("#adjust-display-btn");
+  const roundBtn = document.querySelector("#round-btn");
+  const fittingApplyBtn = document.querySelector("#fitting-apply-btn");
+  const interpolateSelect = document.querySelector("#interpolate-select");
+  const decimalNumInput = document.querySelector("#decimal-num-input");
+  const ratioInput = document.querySelector("#ratio-input");
+  const minValInput = document.querySelector("#min-input");
+  const minValInputValid = document.querySelector("#min-input-valid");
+  const maxValInput = document.querySelector("#max-input");
+  const maxValInputValid = document.querySelector("#max-input-valid");
+  const plusInput = document.querySelector("#plus-input");
+  const plusBtn = document.querySelector("#plus-btn");
+  const multiInput = document.querySelector("#multi-input");
+  const multiBtn = document.querySelector("#multi-btn");
+  const story = document.querySelector("#story");
+
+  const canvas = document.querySelector("#curve-editor canvas");
+
   let curveChart = new CurveChart(canvas);
+
   curveChart.onResize = (ev) => {
-    if (curveChart.axis != null) {
-      curveChart.axis.params.x = 20;
-      curveChart.axis.params.y = 20;
-      curveChart.axis.params.width = canvas.width - 40;
-      curveChart.axis.params.height = canvas.height - 40;
-    }
+    const padding = 20;
+    curveChart.applyParams({
+      x: padding,
+      y: padding,
+      width: canvas.width - padding * 2,
+      height: canvas.height - padding * 2,
+    });
   };
 
-  curveChart.loadArray([
-    12, 34, 51, 11, -13, 14, 15, 5, 1, 50, -12, 12, 34, 51, 11, -13, 14, 15, 5,
-    1, 50, -12, 12, 34, 51, 11,
-  ]);
-  curveChart.fresh();
+  function adjustDisplay() {
+    const val = curveChart.getArrayMean();
+    const ratio = curveChart.getSuitableRatio(0.5);
+    ratioInput.value = ratio;
+    curveChart.setRatio(ratio);
+    curveChart.moveToMiddle(val);
+  }
+  adjustBtn.addEventListener("click", adjustDisplay);
 
-  const fittingBtn = document.querySelector("#fitting-btn");
-  const fittingApplyBtn = document.querySelector("#fitting-apply-btn");
-  fittingBtn.addEventListener("click", (ev) => {
-    if (fittingBtn.classList.toggle("button-fitting-mode")) {
-      fittingApplyBtn.classList.remove("button-disable");
-      if (curveChart.axis != null) {
-        curveChart.axis.params.fittingMode = true;
-      }
-    } else {
-      fittingApplyBtn.classList.add("button-disable");
-      if (curveChart.axis != null) {
-        curveChart.axis.params.fittingMode = false;
-        curveChart.axis.clearFittingCurve();
+  function storyUpdate() {
+    story.sepList = extractSeparators(story.value);
+    story.valArr = parseNumberArray(story.value);
+    curveChart.loadArray(story.valArr);
+    adjustDisplay();
+    curveChart.fresh();
+  }
+  story.addEventListener("change", storyUpdate);
+  // story.addEventListener("click", storyUpdate);
+
+  function valueChanged(idx, val) {
+    story.value = joinNumberArray(story.valArr, story.sepList);
+  }
+
+  roundBtn.addEventListener("click", (ev) => {
+    if (curveChart.axis != null) {
+      for (let i = 0; i < curveChart.axis.params.valArr.length; i++) {
+        curveChart.axis.params.valArr[i] = curveChart.axis.valueLimit(
+          curveChart.axis.params.valArr[i]
+        );
       }
     }
     curveChart.fresh();
+    valueChanged();
+  });
+
+  fittingBtn.addEventListener("click", (ev) => {
+    if (fittingBtn.classList.toggle("button-fitting-mode")) {
+      fittingApplyBtn.classList.remove("button-disable");
+      curveChart.applyParams({ fittingMode: true });
+    } else {
+      fittingApplyBtn.classList.add("button-disable");
+      if (curveChart.axis != null) {
+        curveChart.applyParams({ fittingMode: false });
+        curveChart.clearFittingCurve();
+      }
+    }
   });
   fittingApplyBtn.addEventListener("click", (ev) => {
     if (!fittingApplyBtn.classList.contains("button-disable")) {
-      if (curveChart.axis != null) {
-        curveChart.axis.applyFitting();
-      }
+      curveChart.applyFitting();
       fittingBtn.click();
     }
+    valueChanged();
   });
+
+  decimalNumInput.addEventListener("change", (ev) => {
+    if (decimalNumInput.value > 6) {
+      decimalNumInput.value = 6;
+    }
+    if (decimalNumInput.value < 0) {
+      decimalNumInput.value = 0;
+    }
+    decimalNumInput.value = Number(decimalNumInput.value).toFixed(0);
+    curveChart.applyParams({ decimalNum: Number(decimalNumInput.value) });
+    valueChanged();
+  });
+
+  ratioInput.addEventListener("change", (ev) => {
+    if (ratioInput.value < ratioInput.step) {
+      ratioInput.value = ratioInput.step;
+    }
+    // curveChart.applyParams({ ratio: Number(ratioInput.value) });
+    curveChart.setRatio(Number(ratioInput.value));
+  });
+
+  if (!minValInputValid.checked) {
+    minValInput.disabled = true;
+  }
+  minValInputValid.addEventListener("change", (ev) => {
+    if (minValInputValid.checked) {
+      minValInput.disabled = false;
+      if (minValInput.value.length == 0) {
+        minValInput.value = "0";
+      }
+      curveChart.applyParams({ minVal: Number(minValInput.value) });
+    } else {
+      minValInput.disabled = true;
+      curveChart.applyParams({ minVal: null });
+    }
+  });
+  if (!maxValInputValid.checked) {
+    maxValInput.disabled = true;
+  }
+  maxValInputValid.addEventListener("change", (ev) => {
+    if (maxValInputValid.checked) {
+      maxValInput.disabled = false;
+      if (maxValInput.value.length == 0) {
+        maxValInput.value = "0";
+      }
+      curveChart.applyParams({ maxVal: Number(maxValInput.value) });
+    } else {
+      maxValInput.disabled = true;
+      curveChart.applyParams({ maxVal: null });
+    }
+  });
+
+  minValInput.addEventListener("change", (ev) => {
+    if (maxValInputValid.checked && minValInput.value > maxValInput.value) {
+      minValInput.value = maxValInput.value;
+    }
+    if (minValInputValid.checked) {
+      curveChart.applyParams({ minVal: Number(minValInput.value) });
+    }
+  });
+  maxValInput.addEventListener("change", (ev) => {
+    if (minValInputValid.checked && maxValInput.value < minValInput.value) {
+      maxValInput.value = minValInput.value;
+    }
+    if (maxValInputValid.checked) {
+      curveChart.applyParams({ maxVal: Number(maxValInput.value) });
+    }
+  });
+
+  plusBtn.addEventListener("click", (ev) => {
+    if (curveChart.axis != null) {
+      for (let i = 0; i < curveChart.axis.params.valArr.length; i++) {
+        curveChart.axis.params.valArr[i] += Number(plusInput.value);
+      }
+    }
+    curveChart.fresh();
+    valueChanged();
+  });
+
+  multiBtn.addEventListener("click", (ev) => {
+    if (curveChart.axis != null) {
+      for (let i = 0; i < curveChart.axis.params.valArr.length; i++) {
+        curveChart.axis.params.valArr[i] *= Number(multiInput.value);
+      }
+    }
+    curveChart.fresh();
+    valueChanged();
+  });
+
+  interpolateSelect.addEventListener("change", (ev) => {
+    curveChart.interpolate = Interpolate[interpolateSelect.value];
+  });
+
+  // 初始参数
+  curveChart.applyParams({
+    interpolate: Interpolate[interpolateSelect.value],
+    minVal: minValInputValid.checked ? Number(minValInput.value) : null,
+    maxVal: minValInputValid.checked ? Number(maxValInput.value) : null,
+    decimalNum: Number(decimalNumInput.value),
+    ratio: Number(ratioInput.value),
+    onVauleChanged: valueChanged,
+  });
+
+  storyUpdate();
+
+  // curveChart.loadArray([
+  //   12, 34, 51, 11, -13, 14, 15, 5, 1, 50, -12, 12, 34, 51, 11, -13, 14, 15, 5,
+  //   1, 50, -12, 12, 34, 51, 11,
+  // ]);
+  // adjustDisplay();
+  // curveChart.fresh();
 };

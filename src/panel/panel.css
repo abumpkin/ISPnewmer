@@ -29,3 +29,11 @@
   background-color: var(--vscode-editor-inactiveSelectionBackground) !important;
   cursor: not-allowed;
 }
+
+label {
+  word-break: keep-all;
+}
+
+canvas:focus {
+  outline: 2px solid var(--vscode-editorWarning-foreground) !important;
+}
