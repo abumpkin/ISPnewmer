@@ -1418,7 +1418,9 @@ window.onload = () => {
   });
 
   interpolateSelect.addEventListener("change", (ev) => {
-    curveChart.interpolate = Interpolate[interpolateSelect.value];
+    curveChart.applyParams({
+      interpolate: Interpolate[interpolateSelect.value],
+    });
   });
 
   // 初始参数
