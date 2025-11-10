@@ -7,6 +7,10 @@
     "url": "https://github.com/abumpkin"
   },
   "homepage": "https://github.com/abumpkin/ISPnewmer",
+  "license": "MIT",
+  "publisher": "abumpkin",
+  "displayName": "ISPnewmer",
+  "icon": "",
   "engines": {
     "vscode": "^1.22.0"
   },
