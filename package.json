@@ -1,6 +1,12 @@
 {
   "name": "vsc-plugin-ispnewmer",
   "version": "0.0.1",
+  "author": {
+    "name": "abumpkin",
+    "email": "forwardslash@foxmail.com",
+    "url": "https://github.com/abumpkin"
+  },
+  "homepage": "https://github.com/abumpkin/ISPnewmer",
   "engines": {
     "vscode": "^1.22.0"
   },
@@ -28,6 +34,8 @@
       ]
     }
   },
-  "enabledApiProposals": ["extensionRuntime"],
+  "enabledApiProposals": [
+    "extensionRuntime"
+  ],
   "main": "./src/ext.js"
 }
