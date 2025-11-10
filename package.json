@@ -1,5 +1,5 @@
 {
-  "name": "vsc-plugin-ispnewmer",
+  "name": "ispnewmer",
   "version": "0.0.1",
   "author": {
     "name": "abumpkin",
@@ -7,6 +7,9 @@
     "url": "https://github.com/abumpkin"
   },
   "homepage": "https://github.com/abumpkin/ISPnewmer",
+  "repository": {
+    "url": "https://github.com/abumpkin/ISPnewmer"
+  },
   "license": "MIT",
   "publisher": "abumpkin",
   "displayName": "ISPnewmer",
@@ -38,8 +41,5 @@
       ]
     }
   },
-  "enabledApiProposals": [
-    "extensionRuntime"
-  ],
   "main": "./src/ext.js"
 }
